@@ -19,6 +19,24 @@ struct Token
     int val;        //kindがTK_NUMの場合、その数値
     char *str;      //トークン文字列
 };
+
+typedef enum
+{
+    ND_ADD,
+    ND_SUB,
+    ND_MUL,
+    ND_DIV,
+    ND_NUM,
+} NodeKind;
+typedef struct Node Node;
+struct Node
+{
+    NodeKind kind;
+    Node *lhs;
+    Node *rhs;
+    int val;
+};
+
 //現在着目しているトークン
 Token *token;
 
