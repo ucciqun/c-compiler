@@ -75,7 +75,7 @@ bool consume(char op)
 void expect(char op)
 {
     if (token->kind != TK_RESERVED || token->str[0] != op)
-        error("'%c'ではありません", op);
+        error_at(token->str, "'%c'ではありません", op);
     token = token->next;
 }
 
@@ -84,7 +84,7 @@ void expect(char op)
 int expect_number()
 {
     if (token->kind != TK_NUM)
-        error("数ではありません");
+        error_at(token->str, "数ではありません");
     int val = token->val;
     token = token->next;
     return val;
@@ -129,7 +129,7 @@ Token *tokenize(char *p)
             cur->val = strtol(p, &p, 10);
             continue;
         }
-        error("トークナイズできません");
+        error_at(p, "トークナイズできません");
     }
     new_token(TK_EOF, cur, p);
     return head.next;
@@ -151,6 +151,10 @@ Node *new_node_num(int val)
     node->val = val;
     return node;
 }
+
+Node *expr();
+Node *mul();
+Node *primary();
 
 Node *expr()
 {
@@ -192,6 +196,43 @@ Node *primary()
     return new_node_num(expect_number());
 }
 
+//
+// generator
+//
+
+void gen(Node *node)
+{
+    if (node->kind == ND_NUM)
+    {
+        printf("    push %d\n", node->val);
+        return;
+    }
+    gen(node->lhs);
+    gen(node->rhs);
+
+    printf("    pop rdi\n");
+    printf("    pop rax\n");
+
+    switch (node->kind)
+    {
+    case ND_ADD:
+        printf("    add rax, rdi\n");
+        break;
+    case ND_SUB:
+        printf("    sub rax, rdi\n");
+        break;
+    case ND_MUL:
+        printf("    imul rax, rdi\n");
+        break;
+    case ND_DIV:
+        printf("    cqo\n");
+        printf("    idiv rdi\n");
+        break;
+    }
+
+    printf("    push rax\n");
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 2)
@@ -199,25 +240,17 @@ int main(int argc, char **argv)
         fprintf(stderr, "引数の個数が正しくありません\n");
         return 1;
     }
-    token = tokenize(argv[1]);
+    user_input = argv[1];
+    token = tokenize(user_input);
+    Node *node = expr();
 
     printf(".intel_syntax noprefix\n");
     printf(".globl main\n");
     printf("main:\n");
-    printf("    mov rax, %d\n", expect_number());
 
-    while (!at_eof())
-    {
-        if (consume('+'))
-        {
-            printf("    add rax, %d\n", expect_number());
-            continue;
-        }
-        expect('-');
+    gen(node);
 
-        printf("    sub rax, %d\n", expect_number());
-    }
-
+    printf("    pop rax\n");
     printf("  ret\n");
     return 0;
 }
