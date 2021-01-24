@@ -5,19 +5,25 @@
 #include <stdlib.h>
 #include <string.h>
 
+//
+// Tokenizer
+//
+
 typedef enum
 {
-    TK_RESERVED, //記号
-    TK_NUM,      //整数トークン
-    TK_EOF,      //入力の終わりを表すトークン
+    TK_RESERVED, // Keywords or punctuators
+    TK_NUM,      // Integer literals
+    TK_EOF,      // End-of-file markers
 } TokenKind;
+
+// Token type
 typedef struct Token Token;
 struct Token
 {
-    TokenKind kind; //トークンの型
-    Token *next;    //次の入力トークン
-    int val;        //kindがTK_NUMの場合、その数値
-    char *str;      //トークン文字列
+    TokenKind kind; // Token kind
+    Token *next;    // Next token
+    int val;        // If kind is TK_NUM, its value
+    char *str;      // Token string
 };
 
 //抽象構文木のノードの種類
@@ -40,13 +46,21 @@ struct Node
     int val;       //kindがND_NUMの場合のみ使う
 };
 
-//現在着目しているトークン
+// Current token
 Token *token;
 
 //エラーを報告するための関数
 //printfと同じ引数を取る
 
 char *user_input;
+void error(char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+    exit(1);
+}
 void error_at(char *loc, char *fmt, ...)
 {
     va_list ap;
@@ -118,7 +132,7 @@ Token *tokenize(char *p)
             p++;
             continue;
         }
-        if (*p == '+' || *p == '-')
+        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')')
         {
             cur = new_token(TK_RESERVED, cur, p++);
             continue;
